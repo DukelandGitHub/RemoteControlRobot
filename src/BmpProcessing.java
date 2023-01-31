@@ -17,6 +17,8 @@ import java.util.Date;
 import java.util.logging.Level;
 import java.util.logging.LogManager;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class BmpProcessing {
 
@@ -116,7 +118,12 @@ public class BmpProcessing {
         for (String s: buf) {
 
             String login = st.getLogin(s);
+            login = login.substring(login.indexOf("#") + 1);
+            System.out.println(login);
+            String domain = st.getLogin(s);
+            domain = domain.substring(0, domain.indexOf("#"));
             Date date = st.getDate(s);
+            System.out.println(domain);
             String flagimg = "0";
 
             if ((st.loginold.compareTo(login) == 0) && (st.dateold != null)) {
@@ -142,8 +149,9 @@ public class BmpProcessing {
                 }
             }
 
-            String sqlstring = "insert into ActionPoint (UserLogin,Station,DateTimeAction,Flagimg) values(\'" + login.replace("#", "\\") +
-                    "\',\'" + st.name + "\',\'" + dateformatsql.format(date) + "\',\'" + flagimg + "\')";
+            String sqlstring = "insert into ActionPoint (UserLogin,Station,DateTimeAction,Flagimg,UserDomain) values(\'" + login +
+                    "\',\'" + st.name + "\',\'" + dateformatsql.format(date) + "\',\'" + flagimg + "\',\'" + domain + "\')";
+            System.out.println(sqlstring);
             mansql.InsertSQL(sqlstring);
         }
     }
@@ -152,6 +160,7 @@ public class BmpProcessing {
     private boolean TransformBMP(String s, Station st) {
 
         File f = new File(st.pathname + s);
+        String sbuf = s;
         try {
             BufferedImage image = ImageIO.read(f);
 
@@ -169,9 +178,13 @@ public class BmpProcessing {
                 File destdate = new File(dir);
                 if (!destdate.exists()) { destdate.mkdir(); }
 
-                System.out.println(s);
-                File dest =  new File(dir + "\\" + s.substring(0,s.indexOf(".")-2) + "00.png");
-                System.out.println(dir + "\\" + s.substring(0,s.indexOf(".")-2) + "00.png");
+                StringBuffer sb = new StringBuffer(s);
+                int in = indexOfPattern( s,"#.#");
+                if (in > 0) {
+                    sb.insert(in + 1, "0");
+                    sbuf = sb.toString();
+                }
+                File dest =  new File(dir + "\\" + sbuf.substring(0,sbuf.indexOf(".")-2) + "00.png");
                 ImageIO.write( image, "PNG", dest);
 
                 return true;
@@ -224,6 +237,15 @@ public class BmpProcessing {
             LOGGER = Logger.getLogger(Main.class.getName());
         } catch (Exception ignore) {
             ignore.printStackTrace();
+        }
+    }
+
+    private static int indexOfPattern(String s, String pattern) {
+        Matcher m = Pattern.compile(pattern).matcher(s);
+        if (m.find()) {
+            return m.start();
+        } else {
+            return -1;
         }
     }
 
